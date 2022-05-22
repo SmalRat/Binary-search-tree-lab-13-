@@ -9,7 +9,6 @@ from bstnode import BSTNode
 from linkedstack import LinkedStack
 #from linkedqueue import LinkedQueue
 from math import log
-import random
 import time
 
 
@@ -28,13 +27,13 @@ class LinkedBST(AbstractCollection):
         90 degrees counterclockwise."""
 
         def recurse(node, level):
-            s = ""
+            string = ""
             if node != None:
-                s += recurse(node.right, level + 1)
-                s += "| " * level
-                s += str(node.data) + "\n"
-                s += recurse(node.left, level + 1)
-            return s
+                string += recurse(node.right, level + 1)
+                string += "| " * level
+                string += str(node.data) + "\n"
+                string += recurse(node.left, level + 1)
+            return string
 
         return recurse(self._root, 0)
 
@@ -58,14 +57,19 @@ class LinkedBST(AbstractCollection):
     def inorder(self):
         """Supports an inorder traversal on a view of self."""
         lyst = list()
-
-        def recurse(node):
-            if node != None:
-                recurse(node.left)
+        if not self._root:
+            return []
+        stack = [(self._root, False)]
+        while stack:
+            node, state = stack.pop()
+            if state:
                 lyst.append(node.data)
-                recurse(node.right)
-
-        recurse(self._root)
+                continue
+            if node.right:
+                stack.append((node.right, False))
+            stack.append((node, True))
+            if node.left:
+                stack.append((node.left, False))
         return iter(lyst)
 
     def postorder(self):
@@ -139,47 +143,47 @@ class LinkedBST(AbstractCollection):
             raise KeyError("Item not in tree.""")
 
         # Helper function to adjust placement of an item
-        def liftMaxInLeftSubtreeToTop(top):
+        def lift_max_in_left_subtree_to_top(top):
             # Replace top's datum with the maximum datum in the left subtree
             # Pre:  top has a left child
             # Post: the maximum node in top's left subtree
             #       has been removed
             # Post: top.data = maximum value in top's left subtree
             parent = top
-            currentNode = top.left
-            while not currentNode.right == None:
-                parent = currentNode
-                currentNode = currentNode.right
-            top.data = currentNode.data
+            current_node = top.left
+            while not current_node.right == None:
+                parent = current_node
+                current_node = current_node.right
+            top.data = current_node.data
             if parent == top:
-                top.left = currentNode.left
+                top.left = current_node.left
             else:
-                parent.right = currentNode.left
+                parent.right = current_node.left
 
         # Begin main part of the method
         if self.isEmpty(): return None
 
         # Attempt to locate the node containing the item
-        itemRemoved = None
-        preRoot = BSTNode(None)
-        preRoot.left = self._root
-        parent = preRoot
+        item_removed = None
+        pre_root = BSTNode(None)
+        pre_root.left = self._root
+        parent = pre_root
         direction = 'L'
-        currentNode = self._root
-        while not currentNode == None:
-            if currentNode.data == item:
-                itemRemoved = currentNode.data
+        current_node = self._root
+        while not current_node == None:
+            if current_node.data == item:
+                item_removed = current_node.data
                 break
-            parent = currentNode
-            if currentNode.data > item:
+            parent = current_node
+            if current_node.data > item:
                 direction = 'L'
-                currentNode = currentNode.left
+                current_node = current_node.left
             else:
                 direction = 'R'
-                currentNode = currentNode.right
+                current_node = current_node.right
 
         # Return None if the item is absent
-        if itemRemoved == None: return None
+        if item_removed == None: return None
 
         # The item is present, so remove its node
 
@@ -187,24 +191,24 @@ class LinkedBST(AbstractCollection):
         #         Replace the node's value with the maximum value in the
         #         left subtree
         #         Delete the maximium node in the left subtree
-        if not currentNode.left == None \
-                and not currentNode.right == None:
-            liftMaxInLeftSubtreeToTop(currentNode)
+        if not current_node.left == None \
+                and not current_node.right == None:
+            lift_max_in_left_subtree_to_top(current_node)
         else:
 
             # Case 2: The node has no left child
-            if currentNode.left == None:
-                newChild = currentNode.right
+            if current_node.left == None:
+                new_child = current_node.right
 
                 # Case 3: The node has no right child
             else:
-                newChild = currentNode.left
+                new_child = current_node.left
 
                 # Case 2 & 3: Tie the parent to the new child
             if direction == 'L':
-                parent.left = newChild
+                parent.left = new_child
             else:
-                parent.right = newChild
+                parent.right = new_child
 
         # All cases: Reset the root (if it hasn't changed no harm done)
         #            Decrement the collection's size counter
@@ -213,24 +217,34 @@ class LinkedBST(AbstractCollection):
         if self.isEmpty():
             self._root = None
         else:
-            self._root = preRoot.left
-        return itemRemoved
+            self._root = pre_root.left
+        return item_removed
 
-    def replace(self, item, newItem):
+    def replace(self, item, new_item):
         """
         If item is in self, replaces it with newItem and
         returns the old item, or returns None otherwise."""
         probe = self._root
         while probe != None:
             if probe.data == item:
-                oldData = probe.data
-                probe.data = newItem
-                return oldData
+                old_data = probe.data
+                probe.data = new_item
+                return old_data
             elif probe.data > item:
                 probe = probe.left
             else:
                 probe = probe.right
         return None
+
+    def is_leaf(self, parent):
+        """Checks whether a node is a leaf"""
+        if not parent.right and not parent.left:
+            return True
+        return False
+
+    def children(self, parent):
+        """Returns a list of node's children"""
+        return [node for node in (parent.right, parent.left) if node]
 
     def height(self):
         '''
@@ -238,7 +252,7 @@ class LinkedBST(AbstractCollection):
         :return: int
         '''
 
-        def height1(top):
+        def _height1(top):
             '''
             Helper function
             :param top:
@@ -247,20 +261,20 @@ class LinkedBST(AbstractCollection):
             if self.is_leaf(top):
                 return 0
             else:
-                return 1 + max(self._height2(child) for child in self.children(top))
+                return 1 + max(_height1(child) for child in self.children(top))
         if self.isEmpty():
             return None
         else:
-            return height1(self._root)
+            return _height1(self._root)
 
     def is_balanced(self):
         '''
         Return True if tree is balanced
         :return:
         '''
-        return True if self.height < 2 * log(len(self) + 1, 2) - 1 else False
+        return True if self.height() < (2 * log(len(self) + 1, 2) - 1) else False
 
-    def rangeFind(self, low, high):
+    def range_find(self, low, high):
         '''
         Returns a list of the items in the tree, where low <= item <= high."""
         :param low:
@@ -268,6 +282,8 @@ class LinkedBST(AbstractCollection):
         :return:
         '''
         pos_list = []
+        if not self._root:
+            return []
         check_list = [self._root]
         while check_list:
             current_node = check_list.pop()
@@ -281,6 +297,7 @@ class LinkedBST(AbstractCollection):
                     check_list.append(current_node.left)
             elif current_node.data > high and current_node.left:
                 check_list.append(current_node.left)
+        pos_list.sort()
         return pos_list
 
     def rebalance(self):
@@ -289,9 +306,8 @@ class LinkedBST(AbstractCollection):
         :return:
         '''
         el_list = []
-        for el in self:
-            el_list.append(el)
-        el_list.sort()
+        for element in self.inorder():
+            el_list.append(element)
         lists_list = [el_list]
         self.clear()
         while lists_list:
@@ -348,7 +364,8 @@ class LinkedBST(AbstractCollection):
             return potential_predecessor
         while True:
             if not current:
-                return potential_predecessor.data if potential_predecessor else potential_predecessor
+                return potential_predecessor.data if potential_predecessor\
+                    else potential_predecessor
             if item > current.data:
                 potential_predecessor = current
                 current = current.right
@@ -359,7 +376,8 @@ class LinkedBST(AbstractCollection):
                     potential_predecessor = current.left
                     while potential_predecessor.right:
                         potential_predecessor = potential_predecessor.right
-                return potential_predecessor.data if potential_predecessor else potential_predecessor
+                return potential_predecessor.data if potential_predecessor\
+                    else potential_predecessor
 
     @staticmethod
     def demo_bst(path):
@@ -394,8 +412,8 @@ class LinkedBST(AbstractCollection):
             random_list = []
             ordered_list_copy = ordered.copy()
             while ordered_list_copy:
-                el = ordered_list_copy.pop(random.randint(0, len(ordered_list_copy) - 1))
-                random_list.append(el)
+                element = ordered_list_copy.pop(random.randint(0, len(ordered_list_copy) - 1))
+                random_list.append(element)
             return random_list
 
         def time_measurement(to_find, structure):
@@ -407,7 +425,8 @@ class LinkedBST(AbstractCollection):
             stop = time.time()
             operation_time = stop - start
             return operation_time
-        print("This is a demo function to show the efficiency of binary search trees. Starting generation...")
+        print("This is a demo function to show the efficiency of binary\
+ search trees. Starting generation...")
         ordered_list = _reader(path, 50000)
         unordered_list = words_mixing(ordered_list)
         to_find_list = random_words_generator(10000)
@@ -421,9 +440,14 @@ class LinkedBST(AbstractCollection):
 
         print("Generation completed, starting time measurement...")
 
-        print("Search time in an ordered list (by alphabet): " + str(time_measurement(to_find_list, ordered_list)))
-        print("Search time in an unordered list: " + str(time_measurement(to_find_list, unordered_list)))
-        print("Search time in an ordered tree (by alphabet): " + str(time_measurement(to_find_list, ordered_tree)))
-        print("Search time in an unordered tree: " + str(time_measurement(to_find_list, random_ordered_tree)))
+        print("Search time in an ordered list (by alphabet): " +
+              str(time_measurement(to_find_list, ordered_list)))
+        print("Search time in an unordered list: " +
+              str(time_measurement(to_find_list, unordered_list)))
+        print("Search time in an ordered tree (by alphabet): " +
+              str(time_measurement(to_find_list, ordered_tree)))
+        print("Search time in an unordered tree: " +
+              str(time_measurement(to_find_list, random_ordered_tree)))
         ordered_tree.rebalance()
-        print("Search time in a balanced tree (previously ordered tree): " + str(time_measurement(to_find_list, ordered_tree)))
+        print("Search time in a balanced tree (previously ordered tree): " +
+              str(time_measurement(to_find_list, ordered_tree)))
